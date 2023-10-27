@@ -3,5 +3,8 @@ window.mw = {
     using: function(deps, onSuccess) {
       onSuccess()
     }
-  }
+  },
+  config: new Map([
+    ['debug', true]
+  ])
 }

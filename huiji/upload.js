@@ -6,7 +6,7 @@ const fs = require('fs')
 const path = require('path')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
-const shortid = require('shortid')
+const crypto = require('node:crypto')
 const Bluebird = require('bluebird')
 
 async function upload() {
@@ -53,7 +53,7 @@ async function upload() {
         .sync('generated/webroot/{tiles,icon,minimap,args}/**/*.{jpg,png}')
         .map(filename => {
           return {
-            id: shortid.generate(),
+            id: crypto.randomUUID(),
             filename,
             uploadedAt: null
           }
@@ -73,7 +73,7 @@ async function upload() {
       const values = tiles.values()
       for (const v of values) {
         tilesInDb.push({
-          id: shortid.generate(),
+          id: crypto.randomUUID(),
           filename: v,
           uploadedAt: null
         })
