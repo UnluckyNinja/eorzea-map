@@ -202,9 +202,26 @@
       if (localStorage && localStorage.YZWFEorzeaMapPos) {
         var pos = localStorage.YZWFEorzeaMapPos.split(',')
         if (pos.length === 2) {
+          var x = pos[1];
+          var y = pos[0];
+          // 判断x和y是否超出屏幕
+          if (x < 0){
+            x = 0;
+          }
+          if (y < 0){
+            y = 0;
+          }
+          // 如果y比屏幕高度-容器高度还高，则改为屏幕高度-容器高度
+          if (y > window.innerHeight - $mapContainer.height()){
+            y = window.innerHeight - $mapContainer.height();
+          }
+          // 如果x比屏幕宽度-容器宽度还宽，则改为屏幕宽度-容器宽度
+          if (x > window.innerWidth - $mapContainer.width()){
+            x = window.innerWidth - $mapContainer.width();
+          }
           $mapContainer.css({
-            top: pos[0] + 'px',
-            left: pos[1] + 'px'
+            top: y + 'px',
+            left: x + 'px'
           })
         }
       }
