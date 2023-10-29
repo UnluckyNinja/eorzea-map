@@ -1,5 +1,5 @@
 import { Circle, CircleOptions, Icon, Marker, Point, Polygon, Polyline, PolylineOptions, Rectangle } from 'leaflet'
-import { fromMapXY2D, toMapXY2D } from '../coordinate'
+import { fromMapCoordinate2D, fromMapXY2D, toMapXY2D } from '../coordinate'
 import { IMapInfo } from '../loader'
 import { xy } from '../XYPoint'
 
@@ -62,7 +62,7 @@ export function createCircle(
   options: Partial<CircleOptions> = {}
 ) {
   const marker = new Circle(xy(fromMapXY2D(mapInfo, x, y)), {
-    radius,
+    radius: fromMapCoordinate2D(radius, mapInfo.sizeFactor, 0),
     ...options,
   })
 
