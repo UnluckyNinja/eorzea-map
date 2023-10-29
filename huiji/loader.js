@@ -8,15 +8,28 @@
     callback: null,
   }
   var regionMap = {}
-  var MARKER_URL =
-    'https://huiji-public.huijistatic.com/ff14/uploads/e/e6/Map_mark.png'
-  var FATE_ENEMY = 'https://huiji-public.huijistatic.com/ff14/uploads/e/ee/060501.png'
-  var FATE_BOSS = 'https://huiji-public.huijistatic.com/ff14/uploads/0/0c/060502.png'
-  var FATE_COLLECT = 'https://huiji-public.huijistatic.com/ff14/uploads/6/61/060503.png'
-  var FATE_DEFEND = 'https://huiji-public.huijistatic.com/ff14/uploads/c/ca/060504.png'
-  var FATE_ESCORT = 'https://huiji-public.huijistatic.com/ff14/uploads/e/eb/060505.png'
-  var FATE_CHASE = 'https://huiji-public.huijistatic.com/ff14/uploads/8/83/060506.png'
-  var FATE_EVENT = 'https://huiji-public.huijistatic.com/ff14/uploads/b/b0/060508.png'
+  var icons = {
+    flag: 'https://huiji-public.huijistatic.com/ff14/uploads/e/e6/Map_mark.png',
+    enemy: 'https://huiji-public.huijistatic.com/ff14/uploads/e/ee/060501.png',
+    boss: 'https://huiji-public.huijistatic.com/ff14/uploads/0/0c/060502.png',
+    collect: 'https://huiji-public.huijistatic.com/ff14/uploads/6/61/060503.png',
+    defend: 'https://huiji-public.huijistatic.com/ff14/uploads/c/ca/060504.png',
+    escort: 'https://huiji-public.huijistatic.com/ff14/uploads/e/eb/060505.png',
+    chase: 'https://huiji-public.huijistatic.com/ff14/uploads/8/83/060506.png',
+    event: 'https://huiji-public.huijistatic.com/ff14/uploads/b/b0/060508.png',
+
+    eureka: 'https://huiji-public.huijistatic.com/ff14/uploads/f/fd/060958.png',
+
+    'bozjan-sm-enemy': 'https://huiji-public.huijistatic.com/ff14/uploads/d/d5/063914.png',
+    'bozjan-sm-boss': 'https://huiji-public.huijistatic.com/ff14/uploads/b/ba/063915.png',
+    'bozjan-sm-collect': 'https://huiji-public.huijistatic.com/ff14/uploads/9/9b/063916.png',
+    'bozjan-sm-defend': 'https://huiji-public.huijistatic.com/ff14/uploads/b/bd/063917.png',
+    'bozjan-ce-boss': 'https://huiji-public.huijistatic.com/ff14/uploads/0/03/063909.png',
+    'bozjan-ce-duel': 'https://huiji-public.huijistatic.com/ff14/uploads/8/89/063910.png',
+    'bozjan-ce-troop': 'https://huiji-public.huijistatic.com/ff14/uploads/5/59/063911.png',
+    'bozjan-ce-siege': 'https://huiji-public.huijistatic.com/ff14/uploads/c/c7/063912.png',
+  }
+
   var mapSettedUp = false
 
   function setupMap() {
@@ -265,6 +278,7 @@
     $mapContainer.find('.eorzea-map-close-button').click(closeMap)
 
     // 为范围标记提供的渐变
+    // 测试调整标记颜色的工具： https://observablehq.com/d/cd930332a23f9359
     $mapContainer.append($('\
       <div style="width: 0; height: 0; overflow: hidden;">\
         <svg\
@@ -400,7 +414,7 @@
   }
 
   function createFlag(map, x, y) {
-    var marker = eorzea.createIcon(x, y, MARKER_URL, map.mapInfo)
+    var marker = eorzea.createIcon(x, y, icons.flag, map.mapInfo)
     return marker
   }
 
@@ -413,35 +427,14 @@
   }
 
   function createFate(map, x, y, radius, type) {
-    var iconUrl
-    switch (type){
-      case 'boss':
-        iconUrl = FATE_BOSS
-        break;
-      case 'collect':
-        iconUrl = FATE_COLLECT
-        break;
-      case 'defend':
-        iconUrl = FATE_DEFEND
-        break;
-      case 'escort':
-        iconUrl = FATE_ESCORT
-        break;
-      case 'chase':
-        iconUrl = FATE_CHASE
-        break;
-      case 'enemy':
-        iconUrl = FATE_EVENT
-        break;
-      case 'enemy':
-      default:
-        iconUrl = FATE_ENEMY
-        break;
-    }
+    var iconUrl = icons[type]
     var circle = eorzea.createCircle(x, y, radius, map.mapInfo, {
       className: 'fate',
       fillOpacity: 1.0
     })
+    if (!iconUrl) {
+      return circle
+    }
     var icon = eorzea.createIcon(x, y, iconUrl, map.mapInfo)
     return window.YZWF.eorzeaMap.L.featureGroup([circle, icon])
   }

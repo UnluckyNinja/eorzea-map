@@ -62,7 +62,7 @@ export function createCircle(
   options: Partial<CircleOptions> = {}
 ) {
   const marker = new Circle(xy(fromMapXY2D(mapInfo, x, y)), {
-    radius: fromMapCoordinate2D(radius, mapInfo.sizeFactor, 0),
+    radius: fromMapCoordinate2D(radius+1, mapInfo.sizeFactor, 0),
     ...options,
   })
 
