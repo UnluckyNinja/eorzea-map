@@ -2,7 +2,11 @@
 
 ;(function() {
   /* globals $, mw */
-  var map, eorzea, loadingArguments, loadingError, $loading, $mapContainer
+  var map, eorzea, loadingError, $loading, $mapContainer
+  var postponedLoading = {
+    arguments: null,
+    callback: null,
+  }
   var regionMap = {}
   var MARKER_URL =
     'https://huiji-public.huijistatic.com/ff14/uploads/e/e6/Map_mark.png'
@@ -38,7 +42,7 @@
   function delegateEvents() {
 
     function toParams(ele) {
-      const e = $(ele)
+      var e = $(ele)
       return {
         id: e.data('map-id'),
         name: e.data('map-name'),
@@ -49,31 +53,33 @@
         fate: e.data('map-fate'),
       }
     }
-    function newMarker(params){
-      const { x, y, type, radius, fate } = params
-      switch (type) {
+    
+    function newMarker(options) {
+      switch (options.type) {
         case 'quest':
-          return createQuest(map, x, y, radius)
+          return createQuest(map, options.x, options.y, options.radius)
         case 'fate':
-          return createFate(map, x, y, radius, fate)
+          return createFate(map, options.x, options.y, options.radius, options.fate)
         case 'leve':
-          return createLeve(map, x, y, radius)
+          return createLeve(map, options.x, options.y, options.radius)
         case 'flag':
         default:
-          return createFlag(map, x, y)
+          return createFlag(map, options.x, options.y)
       }
     }
 
     $('body').on('click', '.eorzea-map-trigger', function() {
-      const params = toParams(this)
-      const {id, name, type} = params
+      var options = toParams(this)
       if (map) {
-        loadMap(id, name).then(()=>{
-          const marker = newMarker(params)
+        loadMap(options.id, options.name).then(function() {
+          var marker = newMarker(options)
           addMarker(map, marker, true)
         })
       } else {
-        showLoading($(this), [id, name, x, y])
+        showLoading($(this).text(), [options.id, options.name], function(){
+          var marker = newMarker(options)
+          addMarker(map, marker, true)
+        })
       }
     })
     $('body').on('click', '.eorzea-map-group-show-all', function() {
@@ -84,21 +90,35 @@
       }
       var $triggers = $group.find('.eorzea-map-trigger')
       var mapName = ''
-      var markers = []
+      var paramsArray = []
       $triggers.each(function() {
-        const params = toParams(this)
+        var params = toParams(this)
         mapName = params.name
-        markers.push(newMarker(params))
+        paramsArray.push(params)
       })
-      loadMap(null, mapName).then(function() {
-        for (let marker of markers) {
-          addMarker(map, marker)
-        }
-        setTimeout(function() {
-          const group = window.YZWF.eorzeaMap.L.featureGroup(markers)
-          map.fitBounds(group.getBounds(), { maxZoom: 2 })
-        }, 0)
-      })
+      if(map) {
+        loadMap(null, mapName).then(function() {
+          var markers = paramsArray.map(function(it){return newMarker(it)})
+          for (var i = 0; i < markers.length; i++) {
+            addMarker(map, markers[i])
+          }
+          setTimeout(function() {
+            var group = window.YZWF.eorzeaMap.L.featureGroup(markers)
+            map.fitBounds(group.getBounds(), { maxZoom: 1 })
+          }, 0)
+        })
+      } else {
+        showLoading('查看全部', [null, mapName], function(){
+          var markers = paramsArray.map(function(it){return newMarker(it)})
+          for (var i = 0; i < markers.length; i++) {
+            addMarker(map, markers[i])
+          }
+          setTimeout(function() {
+            var group = window.YZWF.eorzeaMap.L.featureGroup(markers)
+            map.fitBounds(group.getBounds(), { maxZoom: 1 })
+          }, 0)
+        })
+      }
     })
   }
 
@@ -122,7 +142,7 @@
     )
   }
 
-  function showLoading($el, mapArugments) {
+  function showLoading(text, mapArugments, callback) {
     if (!$loading) {
       createLoading()
     }
@@ -135,9 +155,10 @@
     }
     $loading
       .find('.eorzea-map-loading-text')
-      .text('正在加载 ' + $el.text() + ' 的地图…')
+      .text('正在加载 ' + text + ' 的地图…')
     $loading.appendTo('body')
-    loadingArguments = mapArugments
+    postponedLoading.arguments = mapArugments
+    postponedLoading.callback = callback
   }
 
   function createLoading() {
@@ -152,7 +173,8 @@
 
   function closeLoding() {
     $loading.remove()
-    loadingArguments = null
+    postponedLoading.arguments = null
+    postponedLoading.callback = null
   }
 
   function initMap(eorzeaMap) {
@@ -243,51 +265,51 @@
     $mapContainer.find('.eorzea-map-close-button').click(closeMap)
 
     // 为范围标记提供的渐变
-    $mapContainer.append($(`
-      <div style="width: 0; height: 0; overflow: hidden;">
-        <svg
-          viewBox="0 0 0 0"
-          xmlns="http://www.w3.org/2000/svg"
-          xmlns:xlink="http://www.w3.org/1999/xlink">
-          <defs>
-            <radialGradient id="quest-gradient">
-              <stop offset="10%" stop-color="#ff944200" />
-              <stop offset="50%" stop-color="#ff944222" />
-              <stop offset="95%" stop-color="#ff944246" />
-            </radialGradient>
-            <radialGradient id="fate-gradient">
-              <stop offset="10%" stop-color="#6698d300" />
-              <stop offset="50%" stop-color="#6698d322" />
-              <stop offset="95%" stop-color="#6698d346" />
-            </radialGradient>
-            <radialGradient id="leve-gradient">
-              <stop offset="10%" stop-color="#68bc5700" />
-              <stop offset="50%" stop-color="#68bc5722" />
-              <stop offset="95%" stop-color="#68bc5746" />
-            </radialGradient>
-          </defs>
-          <style>
-            .quest, .fate, .leve {
-              stroke-linecap: butt;
-              stroke-dasharray: 3;
-              stroke-width: 3px;
-            }
-            .quest {
-              fill: url('#quest-gradient');
-              stroke: #ff7700ff;
-            }
-            .fate {
-              fill: url('#fate-gradient');
-              stroke: #6698d3ff;
-            }
-            .leve {
-              fill: url('#leve-gradient');
-              stroke: #49b135ff;
-            }
-          </style>
-        </svg>
-      </div>
-    `))
+    $mapContainer.append($('\
+      <div style="width: 0; height: 0; overflow: hidden;">\
+        <svg\
+          viewBox="0 0 0 0"\
+          xmlns="http://www.w3.org/2000/svg"\
+          xmlns:xlink="http://www.w3.org/1999/xlink">\
+          <defs>\
+            <radialGradient id="quest-gradient">\
+              <stop offset="10%" stop-color="#ff944222" />\
+              <stop offset="50%" stop-color="#ff944222" />\
+              <stop offset="95%" stop-color="#ff944246" />\
+            </radialGradient>\
+            <radialGradient id="fate-gradient">\
+              <stop offset="10%" stop-color="#6698d322" />\
+              <stop offset="50%" stop-color="#6698d322" />\
+              <stop offset="95%" stop-color="#6698d346" />\
+            </radialGradient>\
+            <radialGradient id="leve-gradient">\
+              <stop offset="10%" stop-color="#68bc5722" />\
+              <stop offset="50%" stop-color="#68bc5722" />\
+              <stop offset="95%" stop-color="#68bc5746" />\
+            </radialGradient>\
+          </defs>\
+          <style>\n\
+            .quest, .fate, .leve {\n\
+              stroke-linecap: butt;\n\
+              stroke-dasharray: 3;\n\
+              stroke-width: 3px;\n\
+            }\n\
+            .quest {\n\
+              fill: url("#quest-gradient");\n\
+              stroke: #ff7700ff;\n\
+            }\n\
+            .fate {\n\
+              fill: url("#fate-gradient");\n\
+              stroke: #6698d3ff;\n\
+            }\n\
+            .leve {\n\
+              fill: url("#leve-gradient");\n\
+              stroke: #49b135ff;\n\
+            }\n\
+          </style>\
+        </svg>\
+      </div>\
+    '))
 
     $mapContainer.appendTo('body')
 
@@ -299,8 +321,8 @@
           visibility: 'visible'
         })
         map = mapInstance
-        if (loadingArguments) {
-          loadMap.apply(this, loadingArguments)
+        if (postponedLoading.arguments) {
+          loadMap.apply(this, postponedLoading.arguments).then(postponedLoading.callback || function(){})
           closeLoding()
         }
         trackEvent('load_data_success')
@@ -308,7 +330,7 @@
       ['catch'](function(err) {
         loadingError = err
         trackEvent('load_data_error', err && err.message)
-        if (loadingArguments) {
+        if (postponedLoading.arguments) {
           alert('地图加载失败，原因：' + err.message)
           closeLoding()
         }
@@ -369,7 +391,7 @@
     if (pan) {
       setTimeout(function() {
         if (marker.getBounds) {
-          map.fitBounds(marker.getBounds(), {maxZoom: 2})
+          map.fitBounds(marker.getBounds(), {maxZoom: 1})
         } else if (marker.getLatLng){
           map.setView(marker.getLatLng(), -1)
         }
@@ -383,12 +405,15 @@
   }
 
   function createQuest(map, x, y, radius) {
-    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'quest'})
+    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {
+      className: 'quest',
+      fillOpacity: 1.0
+    })
     return marker
   }
 
   function createFate(map, x, y, radius, type) {
-    let iconUrl
+    var iconUrl
     switch (type){
       case 'boss':
         iconUrl = FATE_BOSS
@@ -413,13 +438,19 @@
         iconUrl = FATE_ENEMY
         break;
     }
-    let circle = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'fate'})
-    let icon = eorzea.createIcon(x, y, iconUrl, map.mapInfo)
+    var circle = eorzea.createCircle(x, y, radius, map.mapInfo, {
+      className: 'fate',
+      fillOpacity: 1.0
+    })
+    var icon = eorzea.createIcon(x, y, iconUrl, map.mapInfo)
     return window.YZWF.eorzeaMap.L.featureGroup([circle, icon])
   }
 
   function createLeve(map, x, y, radius) {
-    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'leve'})
+    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {
+      className: 'leve',
+      fillOpacity: 1.0
+    })
     return marker
   }
 
