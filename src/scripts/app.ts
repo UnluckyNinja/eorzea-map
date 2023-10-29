@@ -9,6 +9,7 @@ import { AdvancedTileLayer } from './layers/AdvancedTileLayer'
 import * as loader from './loader'
 import { initMap } from './map'
 import { xy } from './XYPoint'
+import { createIcon } from './markers'
 
 const { Icon, Marker, Point } = L
 
@@ -80,16 +81,7 @@ function simpleMarker(
   iconUrl: string,
   mapInfo: loader.IMapInfo
 ) {
-  const icon = new Icon({
-    iconSize: new Point(32, 32),
-    iconUrl
-  })
-  const marker = new Marker(xy(fromMapXY2D(mapInfo, x, y)), {
-    icon,
-    zIndexOffset: 1000,
-    pane: 'popupPane'
-  })
-  return marker
+  return createIcon(x, y, iconUrl, mapInfo)
 }
 
 function setCdnUrl(url: string) {

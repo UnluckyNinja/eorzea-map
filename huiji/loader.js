@@ -6,6 +6,13 @@
   var regionMap = {}
   var MARKER_URL =
     'https://huiji-public.huijistatic.com/ff14/uploads/e/e6/Map_mark.png'
+  var FATE_ENEMY = 'https://huiji-public.huijistatic.com/ff14/uploads/e/ee/060501.png'
+  var FATE_BOSS = 'https://huiji-public.huijistatic.com/ff14/uploads/0/0c/060502.png'
+  var FATE_COLLECT = 'https://huiji-public.huijistatic.com/ff14/uploads/6/61/060503.png'
+  var FATE_DEFEND = 'https://huiji-public.huijistatic.com/ff14/uploads/c/ca/060504.png'
+  var FATE_ESCORT = 'https://huiji-public.huijistatic.com/ff14/uploads/e/eb/060505.png'
+  var FATE_CHASE = 'https://huiji-public.huijistatic.com/ff14/uploads/8/83/060506.png'
+  var FATE_EVENT = 'https://huiji-public.huijistatic.com/ff14/uploads/b/b0/060508.png'
   var mapSettedUp = false
 
   function setupMap() {
@@ -29,15 +36,44 @@
   }
 
   function delegateEvents() {
+
+    function toParams(ele) {
+      const e = $(ele)
+      return {
+        id: e.data('map-id'),
+        name: e.data('map-name'),
+        x: e.data('map-x'),
+        y: e.data('map-y'),
+        type: e.data('map-type'),
+        radius: e.data('map-radius'),
+        fate: e.data('map-fate'),
+      }
+    }
+    function newMarker(params){
+      const { x, y, type, radius, fate } = params
+      switch (type) {
+        case 'quest':
+          return createQuest(map, x, y, radius)
+        case 'fate':
+          return createFate(map, x, y, radius, fate)
+        case 'leve':
+          return createLeve(map, x, y, radius)
+        case 'flag':
+        default:
+          return createFlag(map, x, y)
+      }
+    }
+
     $('body').on('click', '.eorzea-map-trigger', function() {
-      var mapId = $(this).data('map-id')
-      var mapName = $(this).data('map-name')
-      var mapX = $(this).data('map-x')
-      var mapY = $(this).data('map-y')
+      const params = toParams(this)
+      const {id, name, type} = params
       if (map) {
-        loadMap(mapId, mapName, mapX, mapY)
+        loadMap(id, name).then(()=>{
+          const marker = newMarker(params)
+          addMarker(map, marker, true)
+        })
       } else {
-        showLoading($(this), [mapId, mapName, mapX, mapY])
+        showLoading($(this), [id, name, x, y])
       }
     })
     $('body').on('click', '.eorzea-map-group-show-all', function() {
@@ -48,15 +84,20 @@
       }
       var $triggers = $group.find('.eorzea-map-trigger')
       var mapName = ''
-      var coords = []
+      var markers = []
       $triggers.each(function() {
-        mapName = $(this).data('map-name')
-        coords.push([$(this).data('map-x'), $(this).data('map-y')])
+        const params = toParams(this)
+        mapName = params.name
+        markers.push(newMarker(params))
       })
       loadMap(null, mapName).then(function() {
-        for (var i = 0; i < coords.length; i++) {
-          addFlag(map, coords[i][0], coords[i][1])
+        for (let marker of markers) {
+          addMarker(map, marker)
         }
+        setTimeout(function() {
+          const group = window.YZWF.eorzeaMap.L.featureGroup(markers)
+          map.fitBounds(group.getBounds(), { maxZoom: 2 })
+        }, 0)
       })
     })
   }
@@ -183,7 +224,56 @@
       )
     }
     $mapContainer.find('.eorzea-map-close-button').click(closeMap)
+
+    // 为范围标记提供的渐变
+    $mapContainer.append($(`
+      <div style="width: 0; height: 0; overflow: hidden;">
+        <svg
+          viewBox="0 0 0 0"
+          xmlns="http://www.w3.org/2000/svg"
+          xmlns:xlink="http://www.w3.org/1999/xlink">
+          <defs>
+            <radialGradient id="quest-gradient">
+              <stop offset="10%" stop-color="#ff944200" />
+              <stop offset="50%" stop-color="#ff944222" />
+              <stop offset="95%" stop-color="#ff944246" />
+            </radialGradient>
+            <radialGradient id="fate-gradient">
+              <stop offset="10%" stop-color="#6698d300" />
+              <stop offset="50%" stop-color="#6698d322" />
+              <stop offset="95%" stop-color="#6698d346" />
+            </radialGradient>
+            <radialGradient id="leve-gradient">
+              <stop offset="10%" stop-color="#68bc5700" />
+              <stop offset="50%" stop-color="#68bc5722" />
+              <stop offset="95%" stop-color="#68bc5746" />
+            </radialGradient>
+          </defs>
+          <style>
+            .quest, .fate, .leve {
+              stroke-linecap: butt;
+              stroke-dasharray: 3;
+              stroke-width: 3px;
+            }
+            .quest {
+              fill: url('#quest-gradient');
+              stroke: #ff7700ff;
+            }
+            .fate {
+              fill: url('#fate-gradient');
+              stroke: #6698d3ff;
+            }
+            .leve {
+              fill: url('#leve-gradient');
+              stroke: #49b135ff;
+            }
+          </style>
+        </svg>
+      </div>
+    `))
+
     $mapContainer.appendTo('body')
+
     eorzeaMap
       .create($mapContainer.find('.eorzea-map-inner')[0])
       .then(function(mapInstance) {
@@ -249,9 +339,6 @@
       .loadMapKey(mapKey)
       .then(function() {
         trackEvent('open_success', mapName)
-        if (x && y) {
-          addFlag(map, x, y, true)
-        }
       })
       ['catch'](function(e) {
         console.error(e)
@@ -259,15 +346,64 @@
       })
   }
 
-  function addFlag(map, x, y, pan) {
-    var marker = eorzea.simpleMarker(x, y, MARKER_URL, map.mapInfo)
+  function addMarker(map, marker, pan) {
     marker.addTo(map)
     map.markers.push(marker) // 保证地图切换时清空标记
     if (pan) {
       setTimeout(function() {
-        map.setView(map.mapToLatLng2D(x, y), -1)
+        if (marker.getBounds) {
+          map.fitBounds(marker.getBounds(), {maxZoom: 2})
+        } else if (marker.getLatLng){
+          map.setView(marker.getLatLng(), -1)
+        }
       }, 0)
     }
+  }
+
+  function createFlag(map, x, y) {
+    var marker = eorzea.createIcon(x, y, MARKER_URL, map.mapInfo)
+    return marker
+  }
+
+  function createQuest(map, x, y, radius) {
+    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'quest'})
+    return marker
+  }
+
+  function createFate(map, x, y, radius, type) {
+    let iconUrl
+    switch (type){
+      case 'boss':
+        iconUrl = FATE_BOSS
+        break;
+      case 'collect':
+        iconUrl = FATE_COLLECT
+        break;
+      case 'defend':
+        iconUrl = FATE_DEFEND
+        break;
+      case 'escort':
+        iconUrl = FATE_ESCORT
+        break;
+      case 'chase':
+        iconUrl = FATE_CHASE
+        break;
+      case 'enemy':
+        iconUrl = FATE_EVENT
+        break;
+      case 'enemy':
+      default:
+        iconUrl = FATE_ENEMY
+        break;
+    }
+    let circle = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'fate'})
+    let icon = eorzea.createIcon(x, y, iconUrl, map.mapInfo)
+    return window.YZWF.eorzeaMap.L.featureGroup([circle, icon])
+  }
+
+  function createLeve(map, x, y, radius) {
+    var marker = eorzea.createCircle(x, y, radius, map.mapInfo, {className: 'leve'})
+    return marker
   }
 
   function closeMap() {
