@@ -117,7 +117,7 @@
           }
           setTimeout(function() {
             var group = window.YZWF.eorzeaMap.L.featureGroup(markers)
-            map.fitBounds(group.getBounds(), { maxZoom: 1 })
+            map.fitBounds(group.getBounds(), { maxZoom: -1 })
           }, 0)
         })
       } else {
@@ -128,7 +128,7 @@
           }
           setTimeout(function() {
             var group = window.YZWF.eorzeaMap.L.featureGroup(markers)
-            map.fitBounds(group.getBounds(), { maxZoom: 1 })
+            map.fitBounds(group.getBounds(), { maxZoom: -1 })
           }, 0)
         })
       }
@@ -405,7 +405,7 @@
     if (pan) {
       setTimeout(function() {
         if (marker.getBounds) {
-          map.fitBounds(marker.getBounds(), {maxZoom: 1})
+          map.fitBounds(marker.getBounds(), { maxZoom: -1 })
         } else if (marker.getLatLng){
           map.setView(marker.getLatLng(), -1)
         }
