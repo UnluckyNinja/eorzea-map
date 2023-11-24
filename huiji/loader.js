@@ -9,6 +9,9 @@
   }
   var regionMap = {}
   var icons = {
+    empty: 'https://huiji-public.huijistatic.com/ff14/uploads/4/4f/FATE%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%95%8C%E4%BA%BA.png',
+
+    giver: 'https://huiji-public.huijistatic.com/ff14/uploads/9/9e/060093.png',
     flag: 'https://huiji-public.huijistatic.com/ff14/uploads/e/e6/Map_mark.png',
     enemy: 'https://huiji-public.huijistatic.com/ff14/uploads/e/ee/060501.png',
     boss: 'https://huiji-public.huijistatic.com/ff14/uploads/0/0c/060502.png',
@@ -20,6 +23,7 @@
 
     eureka: 'https://huiji-public.huijistatic.com/ff14/uploads/f/fd/060958.png',
 
+    'bozjan-sm-giver': 'https://huiji-public.huijistatic.com/ff14/uploads/8/83/063908.png',
     'bozjan-sm-enemy': 'https://huiji-public.huijistatic.com/ff14/uploads/d/d5/063914.png',
     'bozjan-sm-boss': 'https://huiji-public.huijistatic.com/ff14/uploads/b/ba/063915.png',
     'bozjan-sm-collect': 'https://huiji-public.huijistatic.com/ff14/uploads/9/9b/063916.png',
@@ -28,6 +32,9 @@
     'bozjan-ce-duel': 'https://huiji-public.huijistatic.com/ff14/uploads/8/89/063910.png',
     'bozjan-ce-troop': 'https://huiji-public.huijistatic.com/ff14/uploads/5/59/063911.png',
     'bozjan-ce-siege': 'https://huiji-public.huijistatic.com/ff14/uploads/c/c7/063912.png',
+
+    'ishgard-craft': 'https://huiji-public.huijistatic.com/ff14/uploads/1/19/060994.png',
+    'ishgard-event': 'https://huiji-public.huijistatic.com/ff14/uploads/c/ce/063926.png',
   }
 
   var mapSettedUp = false
@@ -52,6 +59,20 @@
     }
   }
 
+  function newMarker(options) {
+    switch (options.type) {
+      case 'quest':
+        return createQuest(map, options.x, options.y, options.radius)
+      case 'fate':
+        return createFate(map, options.x, options.y, options.radius, options.fate)
+      case 'leve':
+        return createLeve(map, options.x, options.y, options.radius)
+      case 'flag':
+      default:
+        return createFlag(map, options.x, options.y)
+    }
+  }
+
   function delegateEvents() {
 
     function toParams(ele) {
@@ -67,19 +88,6 @@
       }
     }
     
-    function newMarker(options) {
-      switch (options.type) {
-        case 'quest':
-          return createQuest(map, options.x, options.y, options.radius)
-        case 'fate':
-          return createFate(map, options.x, options.y, options.radius, options.fate)
-        case 'leve':
-          return createLeve(map, options.x, options.y, options.radius)
-        case 'flag':
-        default:
-          return createFlag(map, options.x, options.y)
-      }
-    }
 
     $('body').on('click', '.eorzea-map-trigger', function() {
       var options = toParams(this)
@@ -392,6 +400,7 @@
       .loadMapKey(mapKey)
       .then(function() {
         trackEvent('open_success', mapName)
+        addMarker(map, newMarker({ type:'flag', x: x, y: y }), true)
       })
       ['catch'](function(e) {
         console.error(e)
